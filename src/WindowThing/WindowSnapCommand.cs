@@ -16,6 +16,18 @@ internal class WindowSnapCommand
         _keyHook = keyHook;
     }
 
+    public void BindShortcut()
+    {
+        if (!_bound)
+        {
+            _keyHook.KeyPressed += KeyHookOnKeyPressed;
+            _keyHook.KeyDown += HandleIfShortcut;
+            _keyHook.KeyUp += HandleIfShortcut;
+        }
+
+        _bound = true;
+    }
+
     private void HandleIfShortcut(object? sender, KeyHookKeyEventArgs e)
     {
         e.Handled = IsShortcut(e);
@@ -37,12 +49,34 @@ internal class WindowSnapCommand
 
     private void CenterActiveWindow()
     {
+        var windowContextResult = GetWindowContext();
+
+        if (!windowContextResult.IsSuccess)
+        {
+            Debug.WriteLine(windowContextResult.Error);
+            return;
+        }
+
+        var windowContext = windowContextResult.Value!;
+
+        if (windowContext.IsWindowMaximized)
+        {
+            return;
+        }
+
+        var nextPosition = GetNextWindowPosition(windowContext);
+
+        SetWindowPosition(windowContext, nextPosition);
+    }
+
+    private Result<WindowContext> GetWindowContext()
+    {
         var activeWindow = User32.GetForegroundWindow();
 
         if (activeWindow == IntPtr.Zero)
         {
             Debug.WriteLine($"Active window is ZERO: {(int)activeWindow}");
-            return;
+            return Result<WindowContext>.Fail("Could not find active window");
         }
 
         var stringBuilder = new StringBuilder(1024);
@@ -71,47 +105,77 @@ internal class WindowSnapCommand
         if (!getMonitorInfoSuccess)
         {
             Debug.WriteLine($"Failed to get monitor info for monitor 0x{monitor:X}");
-            return;
+            return Result<WindowContext>.Fail($"Failed to get monitor info for monitor 0x{monitor:X}");
         }
 
-        Debug.WriteLine($"MonitorInfo found window: 0x{monitor:X}");
-        Debug.Indent();
-        Debug.WriteLine(monitorInfo.PrintDebug());
-        Debug.Unindent();
-
-        // Get window size from rect
-        var windowWidth = windowInfo.rcWindow.Right - windowInfo.rcWindow.Left;
-        var windowHeight = windowInfo.rcWindow.Bottom - windowInfo.rcWindow.Top;
-
-        var screenHeight = monitorInfo.WorkArea.Bottom - monitorInfo.WorkArea.Top;
-        var screenWidth = monitorInfo.WorkArea.Right - monitorInfo.WorkArea.Left;
-
-        // Determine centered position based on screen size and window size
-        var newX = monitorInfo.WorkArea.Left + (screenWidth / 2) - (windowWidth / 2);
-        var newY = monitorInfo.WorkArea.Top + (screenHeight / 2) - (windowHeight / 2);
-
-        // Set new window position
-        Debug.WriteLine($"New window positions is Left:{newX}, Top: {newY}");
-        User32.SetWindowPos(
+        var windowWrapper = new WindowWrapper(
             activeWindow,
-            IntPtr.Zero,
-            newX,
-            newY,
-            windowInfo.rcWindow.Width,
-            windowInfo.rcWindow.Height,
-            1
+            new Position(
+                new Point(windowInfo.rcWindow.Left, windowInfo.rcWindow.Top),
+                new Size(windowInfo.rcWindow.Width, windowInfo.rcWindow.Height)
+            )
         );
+
+        var monitorWrapper = new MonitorWrapper(
+            new Position(
+                new Point(monitorInfo.WorkArea.Left, monitorInfo.WorkArea.Top),
+                new Size(monitorInfo.WorkArea.Width, monitorInfo.WorkArea.Height)
+            )
+        );
+
+        return Result.Success(new WindowContext(windowWrapper, monitorWrapper));
     }
 
-    public void BindShortcut()
+    private Position GetNextWindowPosition(WindowContext windowContext)
     {
-        if (!_bound)
+        var positionCentered = windowContext.Window.CenterIn(windowContext.Monitor);
+
+        if (positionCentered != windowContext.Window.Position)
         {
-            _keyHook.KeyPressed += KeyHookOnKeyPressed;
-            _keyHook.KeyDown += HandleIfShortcut;
-            _keyHook.KeyUp += HandleIfShortcut;
+            return positionCentered;
         }
 
-        _bound = true;
+        var sizeProportional = windowContext.Window.Size.MatchProportions(windowContext.Monitor.Size);
+
+        if (windowContext.Window.Size != sizeProportional)
+        {
+            return windowContext.Window.WithSize(sizeProportional).CenterIn(windowContext.Monitor);
+        }
+
+        var size50 = windowContext.Monitor.Size * 0.5;
+
+        if (windowContext.Window.Size.Width < size50.Width)
+        {
+            return windowContext.Window.WithSize(size50).CenterIn(windowContext.Monitor);
+        }
+
+        var size75 = windowContext.Monitor.Size * 0.75;
+
+        if (windowContext.Window.Size.Width < size75.Width)
+        {
+            return windowContext.Window.WithSize(size75).CenterIn(windowContext.Monitor);
+        }
+
+        var size90 = windowContext.Monitor.Size * 0.9;
+
+        if (windowContext.Window.Size.Width < size90.Width)
+        {
+            return windowContext.Window.WithSize(size90).CenterIn(windowContext.Monitor);
+        }
+
+        return windowContext.Window.WithSize(size50).CenterIn(windowContext.Monitor);
+    }
+
+    private void SetWindowPosition(WindowContext windowContext, Position nextPosition)
+    {
+        User32.SetWindowPos(
+            windowContext.Window.Handle,
+            IntPtr.Zero,
+            nextPosition.Origin.X,
+            nextPosition.Origin.Y,
+            nextPosition.Size.Width,
+            nextPosition.Size.Height,
+            0
+        );
     }
 }
