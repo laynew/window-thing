@@ -61,6 +61,7 @@ internal class WindowSnapCommand
 
         if (windowContext.IsWindowMaximized)
         {
+            Debug.WriteLine($"Active window is maximized. No further action being taken in {nameof(CenterActiveWindow)}");
             return;
         }
 
@@ -113,7 +114,8 @@ internal class WindowSnapCommand
             new Position(
                 new Point(windowInfo.rcWindow.Left, windowInfo.rcWindow.Top),
                 new Size(windowInfo.rcWindow.Width, windowInfo.rcWindow.Height)
-            )
+            ),
+            windowsPlacement.ShowCmd == ShowWindowEnum.Maximize
         );
 
         var monitorWrapper = new MonitorWrapper(
