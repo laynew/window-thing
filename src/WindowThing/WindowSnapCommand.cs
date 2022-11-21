@@ -6,7 +6,7 @@ using WindowThing.Win32Interop;
 
 namespace WindowThing;
 
-internal class WindowSnapCommand
+internal sealed class WindowSnapCommand : IDisposable
 {
     private bool _bound;
     private readonly KeyHook _keyHook;
@@ -26,6 +26,18 @@ internal class WindowSnapCommand
         }
 
         _bound = true;
+    }
+
+    public void UnbindShortcut()
+    {
+        if (_bound)
+        {
+            _keyHook.KeyPressed -= KeyHookOnKeyPressed;
+            _keyHook.KeyDown -= HandleIfShortcut;
+            _keyHook.KeyUp -= HandleIfShortcut;
+        }
+
+        _bound = false;
     }
 
     private void HandleIfShortcut(object? sender, KeyHookKeyEventArgs e)
@@ -179,5 +191,10 @@ internal class WindowSnapCommand
             nextPosition.Size.Height,
             0
         );
+    }
+
+    public void Dispose()
+    {
+        UnbindShortcut();
     }
 }

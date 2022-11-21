@@ -1,5 +1,3 @@
-using WindowThing.InputHandling;
-
 namespace WindowThing;
 
 static class Program
@@ -10,10 +8,7 @@ static class Program
     [STAThread]
     static void Main()
     {
-        using var keyHook = new KeyHook();
-        var command = new WindowSnapCommand(keyHook);
-        command.BindShortcut();
         ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm());
+        Application.Run(new WindowThing());
     }
 }
