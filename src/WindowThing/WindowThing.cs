@@ -13,9 +13,9 @@ internal class WindowThing : ApplicationContext
         Application.ApplicationExit += ApplicationOnApplicationExit;
 
         _notifyIcon.Text = @"Window Thing";
-        _notifyIcon.Icon = AppIcon.Icon;
         _notifyIcon.ContextMenuStrip = CreateMenu();
         _notifyIcon.Visible = true;
+        AppIcon.WhenIconChanges(SetIcon);
 
         _keyHook = new KeyHook();
         _command = new WindowSnapCommand(_keyHook);
@@ -31,7 +31,13 @@ internal class WindowThing : ApplicationContext
     private static ContextMenuStrip CreateMenu()
     {
         var contextMenuStrip = new ContextMenuStrip();
+        contextMenuStrip.Items.Add("&New Icon", null, (_, _) => AppIcon.TimeForNewIcon());
         contextMenuStrip.Items.Add("E&xit", null, (_, _) => Application.Exit());
         return contextMenuStrip;
+    }
+
+    private void SetIcon(Icon icon)
+    {
+        _notifyIcon.Icon = icon;
     }
 }

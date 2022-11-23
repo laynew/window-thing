@@ -2,8 +2,19 @@ namespace WindowThing;
 
 internal static class AppIcon
 {
-    public static readonly Icon Icon = GenerateIcon();
     public const int IconSize = 16;
+
+    private static Icon _currentIcon = GenerateIcon();
+    private static readonly List<Action<Icon>> IconChangeHandlers = new ();
+
+    /// <summary>
+    /// Generates a new app icon and notifies anyone that's listening
+    /// </summary>
+    public static void TimeForNewIcon()
+    {
+        _currentIcon = GenerateIcon();
+        IconChangeHandlers.ForEach(x => x(_currentIcon));
+    }
 
     /// <summary>
     /// Generates a fun little random, symmetrical icon
@@ -27,5 +38,11 @@ internal static class AppIcon
         }
 
         return Icon.FromHandle(bitmap.GetHicon());
+    }
+
+    public static void WhenIconChanges(Action<Icon> iconChangedHandler)
+    {
+        IconChangeHandlers.Add(iconChangedHandler);
+        iconChangedHandler(_currentIcon);
     }
 }
