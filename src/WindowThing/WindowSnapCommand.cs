@@ -156,28 +156,15 @@ internal sealed class WindowSnapCommand : IDisposable
             return windowContext.Window.WithSize(sizeProportional).CenterIn(windowContext.Monitor);
         }
 
-        var size50 = windowContext.Monitor.Size * 0.5;
+        var sizes = new [] { 0.5, 0.75, 0.9 };
 
-        if (windowContext.Window.Size.Width < size50.Width)
-        {
-            return windowContext.Window.WithSize(size50).CenterIn(windowContext.Monitor);
-        }
+        var size = sizes
+            .Select(size => windowContext.Monitor.Size * size)
+            .FirstOrDefault(size => windowContext.Window.Size.Width < size.Width);
+            
+        var nextSize = size != default ? size : windowContext.Monitor.Size * sizes[0];
 
-        var size75 = windowContext.Monitor.Size * 0.75;
-
-        if (windowContext.Window.Size.Width < size75.Width)
-        {
-            return windowContext.Window.WithSize(size75).CenterIn(windowContext.Monitor);
-        }
-
-        var size90 = windowContext.Monitor.Size * 0.9;
-
-        if (windowContext.Window.Size.Width < size90.Width)
-        {
-            return windowContext.Window.WithSize(size90).CenterIn(windowContext.Monitor);
-        }
-
-        return windowContext.Window.WithSize(size50).CenterIn(windowContext.Monitor);
+        return windowContext.Window.WithSize(nextSize).CenterIn(windowContext.Monitor);
     }
 
     private void SetWindowPosition(WindowContext windowContext, Position nextPosition)
