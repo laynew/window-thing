@@ -24,6 +24,7 @@ internal class WindowThing : ApplicationContext
 
     private void ApplicationOnApplicationExit(object? sender, EventArgs e)
     {
+        _notifyIcon.Visible = false;
         _keyHook.Dispose();
         _command.Dispose();
     }
