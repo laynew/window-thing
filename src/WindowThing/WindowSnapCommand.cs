@@ -156,7 +156,7 @@ internal sealed class WindowSnapCommand : IDisposable
             return windowContext.Window.WithSize(sizeProportional).CenterIn(windowContext.Monitor);
         }
 
-        var sizes = new [] { 0.5, 0.75, 0.9 };
+        var sizes = new [] { 0.6, 0.75, 0.9 };
 
         var size = sizes
             .Select(size => windowContext.Monitor.Size * size)
